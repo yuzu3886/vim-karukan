@@ -1,0 +1,133 @@
+*karukan.txt*	Japanese input for Vim using karukan-server
+
+Requirements: Vim 9.1 or later, karukan-server
+	https://github.com/togatoga/karukan
+
+==============================================================================
+CONTENTS						*karukan-contents*
+
+	1. Introduction		|karukan-introduction|
+	2. Usage		|karukan-usage|
+	3. Keys			|karukan-keys|
+	4. Options		|karukan-options|
+	5. Functions		|karukan-functions|
+	6. Commands		|karukan-commands|
+
+==============================================================================
+1. Introduction					*karukan-introduction*
+
+vim-karukan converts romaji to hiragana locally and asks karukan-server for
+kana-kanji conversion candidates over HTTP.  Requests are asynchronous (Vim
+channels), so typing is never blocked while the server is converting.
+
+Candidates are shown in a popup window that looks like the Insert mode
+completion menu.  It uses the |hl-Pmenu|, |hl-PmenuSel|, |hl-PmenuSbar|,
+|hl-PmenuThumb| and |hl-PmenuBorder| highlight groups and honors 'pumopt'
+(border, margin, height, width, maxwidth, opacity).  The "shadow" flag is
+not supported.
+
+==============================================================================
+2. Usage						*karukan-usage*
+
+Press CTRL-J in Insert mode to toggle Japanese input.  The mode is turned off
+when leaving Insert mode and is not turned on again automatically.
+
+Typed romaji is inserted as hiragana (the "reading").  Press <Space> to
+convert the reading; candidates appear below it.  The reading ends when a
+candidate is accepted, when <CR> is pressed, or when the cursor moves away.
+
+The server is started automatically when it is not running (see
+|g:karukan_server_cmd|), and stopped when Vim exits.  Loading the model may
+take a while; kana input works in the meantime.
+
+==============================================================================
+3. Keys							*karukan-keys*
+
+<Plug>(karukan-toggle)		Toggle Japanese input.  Mapped to CTRL-J in
+				Insert mode by default.
+<Plug>(karukan-enable)		Turn Japanese input on.
+<Plug>(karukan-disable)		Turn Japanese input off.
+
+While Japanese input is on:
+
+<Space>		Convert the reading.  When candidates are shown, select the
+		next one (wraps around).  Inserts a space when there is no
+		reading.
+<CR>		Accept the selected candidate, or the reading as is.
+CTRL-Y		Accept the selected candidate (popup only).
+CTRL-N <Tab> <Down>
+		Select the next candidate (popup only).
+CTRL-P <S-Tab> <Up>
+		Select the previous candidate (popup only).
+CTRL-E		Close the popup and restore the reading (popup only).
+<BS> CTRL-H	Delete the last character of the reading.  When a candidate
+		is selected, go back to the reading.
+
+Typing another character while a candidate is selected accepts it and
+starts a new reading.  Keys that are not handled fall back to their default
+behavior.
+
+Symbols: "-" ー  "," 、  "." 。  "[" 「  "]" 」  "/" ・  "~" 〜
+	 "zh" ←  "zj" ↓  "zk" ↑  "zl" →  "z." …  "z," ‥  "z[" 『  "z]" 』
+
+==============================================================================
+4. Options						*karukan-options*
+
+*g:karukan_server_host*		(default: "127.0.0.1")
+	Host of karukan-server.
+
+*g:karukan_server_port*		(default: 3000)
+	Port of karukan-server.
+
+*g:karukan_server_cmd*		(default: ["karukan-server"])
+	Command used to start the server.  "--host" and "--port" are appended.
+	"~" in the first item is expanded. >
+		let g:karukan_server_cmd = ['/path/to/karukan-server']
+<
+*g:karukan_server_autostart*	(default: v:true)
+	Start the server when it is not running.  When disabled, start
+	karukan-server yourself beforehand.  A server started later is used
+	from the next conversion.
+
+*g:karukan_server_start_timeout*	(default: 300)
+	Seconds to wait for a started server to become ready.
+
+*g:karukan_num_candidates*	(default: 5)
+	Number of candidates requested from the model (1-20).  The reading in
+	hiragana and katakana is always appended.
+
+*g:karukan_context_length*	(default: 100)
+	Maximum number of characters before the reading on the same line that
+	are sent as conversion context.
+
+*g:karukan_autocomplete*	(default: v:false)
+	Show candidates automatically while typing.  Can be changed at any
+	time.
+
+*g:karukan_autocomplete_delay*	(default: 100)
+	Milliseconds to wait after the last keystroke before requesting
+	candidates when |g:karukan_autocomplete| is on.
+
+*g:karukan_no_default_mappings*	(default: v:false)
+	Do not map CTRL-J.
+
+==============================================================================
+5. Functions						*karukan-functions*
+
+karukan#IsEnabled()				*karukan#IsEnabled()*
+	Returns true when Japanese input is on in the current buffer.
+	Useful in 'statusline': >
+		set statusline+=%{karukan#IsEnabled()?'[あ]':''}
+<
+karukan#Enable()				*karukan#Enable()*
+karukan#Disable()				*karukan#Disable()*
+karukan#Toggle()				*karukan#Toggle()*
+	Turn Japanese input on, off, or toggle it.
+
+==============================================================================
+6. Commands						*karukan-commands*
+
+:KarukanServerStop					*:KarukanServerStop*
+	Stop the server if it was started by this plugin.
+
+ vim:tw=78:ts=8:noet:ft=help:norl:

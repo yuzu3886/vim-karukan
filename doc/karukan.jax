@@ -1,0 +1,131 @@
+*karukan.txt*	karukan-server を使った Vim 用日本語入力
+
+必要なもの: Vim 9.1 以降、karukan-server
+	https://github.com/togatoga/karukan
+
+==============================================================================
+目次							*karukan-contents*
+
+	1. はじめに		|karukan-introduction|
+	2. 使い方		|karukan-usage|
+	3. キー			|karukan-keys|
+	4. オプション		|karukan-options|
+	5. 関数			|karukan-functions|
+	6. コマンド		|karukan-commands|
+
+==============================================================================
+1. はじめに					*karukan-introduction*
+
+vim-karukan はローマ字からひらがなへの変換をローカルで行い、かな漢字変換の
+候補を HTTP で karukan-server に問い合わせます。リクエストは非同期 (Vim の
+チャネル) で行われるため、サーバーが変換している間も入力がブロックされること
+はありません。
+
+候補は挿入モード補完のメニューと同じ見た目のポップアップウィンドウに表示され
+ます。ハイライトグループ |hl-Pmenu|、|hl-PmenuSel|、|hl-PmenuSbar|、
+|hl-PmenuThumb|、|hl-PmenuBorder| を使用し、'pumopt' (border、margin、
+height、width、maxwidth、opacity) に従います。"shadow" フラグには対応して
+いません。
+
+==============================================================================
+2. 使い方						*karukan-usage*
+
+挿入モードで CTRL-J を押すと日本語入力を切り替えます。挿入モードを抜けると
+日本語入力は無効になり、再び挿入モードに入っても自動では有効になりません。
+
+入力したローマ字はひらがな (「読み」) として挿入されます。<Space> を押すと読み
+を変換し、その下に候補が表示されます。読みは、候補を確定したとき、<CR> を押し
+たとき、またはカーソルが移動したときに終了します。
+
+サーバーが起動していない場合は自動的に起動され (|g:karukan_server_cmd| を参照)、
+Vim の終了時に停止されます。モデルの読み込みには時間がかかることがありますが、
+その間もかな入力は使えます。
+
+==============================================================================
+3. キー							*karukan-keys*
+
+<Plug>(karukan-toggle)		日本語入力を切り替える。デフォルトでは挿入
+				モードの CTRL-J にマップされる。
+<Plug>(karukan-enable)		日本語入力を有効にする。
+<Plug>(karukan-disable)		日本語入力を無効にする。
+
+日本語入力が有効な間:
+
+<Space>		読みを変換する。候補が表示されているときは次の候補を選択する
+		(末尾まで行くと先頭に戻る)。読みがないときはスペースを挿入
+		する。
+<CR>		選択中の候補、または読みをそのまま確定する。
+CTRL-Y		選択中の候補を確定する (ポップアップ表示中のみ)。
+CTRL-N <Tab> <Down>
+		次の候補を選択する (ポップアップ表示中のみ)。
+CTRL-P <S-Tab> <Up>
+		前の候補を選択する (ポップアップ表示中のみ)。
+CTRL-E		ポップアップを閉じて読みに戻す (ポップアップ表示中のみ)。
+<BS> CTRL-H	読みの最後の 1 文字を削除する。候補を選択中のときは読みに
+		戻す。
+
+候補を選択中に別の文字を入力すると、その候補を確定して新しい読みを開始しま
+す。上記以外のキーは通常どおり動作します。
+
+記号: "-" ー  "," 、  "." 。  "[" 「  "]" 」  "/" ・  "~" 〜
+      "zh" ←  "zj" ↓  "zk" ↑  "zl" →  "z." …  "z," ‥  "z[" 『  "z]" 』
+
+==============================================================================
+4. オプション						*karukan-options*
+
+*g:karukan_server_host*		(デフォルト: "127.0.0.1")
+	karukan-server のホスト。
+
+*g:karukan_server_port*		(デフォルト: 3000)
+	karukan-server のポート。
+
+*g:karukan_server_cmd*		(デフォルト: ["karukan-server"])
+	サーバーを起動するコマンド。"--host" と "--port" が末尾に追加される。
+	最初の要素の "~" は展開される。 >
+		let g:karukan_server_cmd = ['/path/to/karukan-server']
+<
+*g:karukan_server_autostart*	(デフォルト: v:true)
+	サーバーが起動していないときに起動する。無効にした場合は、事前に
+	karukan-server を自分で起動しておくこと。後からサーバーを起動しても、
+	次の変換からそのまま使える。
+
+*g:karukan_server_start_timeout*	(デフォルト: 300)
+	起動したサーバーが使えるようになるまで待つ秒数。
+
+*g:karukan_num_candidates*	(デフォルト: 5)
+	モデルに要求する候補の数 (1-20)。読みのひらがなとカタカナは常に
+	末尾に追加される。
+
+*g:karukan_context_length*	(デフォルト: 100)
+	変換の文脈として送る、同じ行で読みより前にある文字の最大数。
+
+*g:karukan_autocomplete*	(デフォルト: v:false)
+	入力中に候補を自動で表示する。いつでも変更できる。
+
+*g:karukan_autocomplete_delay*	(デフォルト: 100)
+	|g:karukan_autocomplete| が有効なとき、最後の打鍵から候補を要求する
+	までに待つミリ秒数。
+
+*g:karukan_no_default_mappings*	(デフォルト: v:false)
+	CTRL-J をマップしない。
+
+==============================================================================
+5. 関数							*karukan-functions*
+
+karukan#IsEnabled()				*karukan#IsEnabled()*
+	カレントバッファで日本語入力が有効なら真を返す。
+	'statusline' で使うと便利: >
+		set statusline+=%{karukan#IsEnabled()?'[あ]':''}
+<
+karukan#Enable()				*karukan#Enable()*
+karukan#Disable()				*karukan#Disable()*
+karukan#Toggle()				*karukan#Toggle()*
+	日本語入力を有効にする、無効にする、または切り替える。
+
+==============================================================================
+6. コマンド						*karukan-commands*
+
+:KarukanServerStop					*:KarukanServerStop*
+	このプラグインが起動したサーバーを停止する。
+
+ vim:tw=78:ts=8:noet:ft=help:norl:
